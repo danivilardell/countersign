@@ -84,3 +84,23 @@ pub fn approve(command: Command<'_>) -> Result<CommandResponse<'_>, AppSW> {
     response.append(signature.as_slice())?;
     Ok(response)
 }
+
+/// PROBE ONLY: no UI, signs the raw bytes without the code hash. Returns the
+/// OS error code (as two big-endian bytes after 0xEE) when the OS refuses.
+#[cfg(feature = "probe")]
+pub fn probe_sign_raw(command: Command<'_>) -> Result<CommandResponse<'_>, AppSW> {
+    let data = command.get_data();
+    let mut buf = [0u8; MAX_MESSAGE_LENGTH];
+    let len = data.len().min(MAX_MESSAGE_LENGTH);
+    buf[..len].copy_from_slice(&data[..len]);
+    let mut response = command.into_response();
+    match endorsement::sign_without_code_hash(&buf[..len]) {
+        Ok(sig) => {
+            response.append(&[0x00])?.append(sig.as_slice())?;
+        }
+        Err(err) => {
+            response.append(&[0xEE])?.append(&err.to_be_bytes())?;
+        }
+    }
+    Ok(response)
+}

@@ -20,6 +20,8 @@ use ledger_secure_sdk_sys::{
     sys_endorsement_get_code_hash, sys_endorsement_get_public_key,
     sys_endorsement_get_public_key_signature, sys_endorsement_key1_sign_data,
 };
+#[cfg(feature = "probe")]
+use ledger_secure_sdk_sys::sys_endorsement_key1_sign_without_code_hash;
 
 pub const PUBLIC_KEY_LENGTH: usize = 65;
 pub const CODE_HASH_LENGTH: usize = 32;
@@ -96,6 +98,22 @@ pub fn sign(data: &[u8]) -> Result<DerSignature, AppSW> {
     })?;
     if sig.len == 0 || sig.len > SIGNATURE_MAX_LENGTH {
         return Err(AppSW::SigningFailed);
+    }
+    Ok(sig)
+}
+
+/// PROBE ONLY (feature "probe"): signs SHA-256(data) with the slot-1 key and
+/// no code hash. Used once to test whether Ledger OS lets an ordinary app
+/// call this syscall; a production build never includes it.
+#[cfg(feature = "probe")]
+pub fn sign_without_code_hash(data: &[u8]) -> Result<DerSignature, u32> {
+    let mut sig = DerSignature { bytes: [0u8; SIGNATURE_MAX_LENGTH], len: SIGNATURE_MAX_LENGTH };
+    // SAFETY: same buffer contract as `sign`.
+    let err = unsafe {
+        sys_endorsement_key1_sign_without_code_hash(data.as_ptr(), data.len(), sig.bytes.as_mut_ptr(), &mut sig.len)
+    };
+    if err != 0 {
+        return Err(err);
     }
     Ok(sig)
 }

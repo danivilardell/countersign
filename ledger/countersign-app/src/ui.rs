@@ -61,6 +61,7 @@ pub fn show_outcome(comm: &mut Comm, ins: &Instruction, outcome: AppSW) -> bool 
         (Instruction::Approve, AppSW::Ok) => "Approved",
         (Instruction::Approve, AppSW::Deny) => "Declined",
         (Instruction::Enroll | Instruction::Approve, _) => "Nothing was signed",
+        #[allow(unreachable_patterns)]
         _ => return false,
     };
     NbglStatus::new().text(text).show(comm, outcome == AppSW::Ok);

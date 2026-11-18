@@ -56,6 +56,8 @@ pub enum Instruction {
     GetAppName,
     Enroll,
     Approve,
+    #[cfg(feature = "probe")]
+    ProbeSignRaw,
 }
 
 impl TryFrom<ApduHeader> for Instruction {
@@ -67,6 +69,8 @@ impl TryFrom<ApduHeader> for Instruction {
             (0x04, 0, 0) => Ok(Instruction::GetAppName),
             (0x10, 0, 0) => Ok(Instruction::Enroll),
             (0x20, 0, 0) => Ok(Instruction::Approve),
+            #[cfg(feature = "probe")]
+            (0x7F, 0, 0) => Ok(Instruction::ProbeSignRaw),
             (0x03 | 0x04 | 0x10 | 0x20, _, _) => Err(AppSW::WrongP1P2),
             (_, _, _) => Err(AppSW::InsNotSupported),
         }
@@ -116,5 +120,7 @@ fn handle_apdu<'a>(command: Command<'a>, ins: &Instruction) -> Result<CommandRes
         Instruction::GetAppName => handlers::get_app_name(command),
         Instruction::Enroll => handlers::enroll(command),
         Instruction::Approve => handlers::approve(command),
+        #[cfg(feature = "probe")]
+        Instruction::ProbeSignRaw => handlers::probe_sign_raw(command),
     }
 }
